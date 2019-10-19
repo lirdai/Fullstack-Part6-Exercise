@@ -1,0 +1,1113 @@
+6.1 - 6.2 Unicafe Revisited
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { createStore } from 'redux'
+
+
+const initial = {
+	good: 0,
+	ok: 0,
+	bad: 0
+}
+
+
+const counterReducer = (state = initial, action) => {
+	switch(action.type) {
+		case 'good':
+			return {
+				...state,
+				good: state.good + 1
+			}
+		case 'ok': 
+			return {
+				...state,
+				ok: state.ok + 1
+			}
+		case 'bad':
+			return {
+				...state,
+				bad: state.bad + 1
+			}
+		case 'zero':
+			return {
+				good: 0,
+				ok: 0,
+				bad: 0
+			}
+		default:
+			return {
+				good: 0,
+				ok: 0,
+				bad: 0
+			}
+	}
+}
+
+
+const store	 = createStore(counterReducer)
+
+
+const App = () => {
+	return(
+		<div>
+			<div>
+				<p>Good: {store.getState().good}</p>
+				<p>OK: {store.getState().ok}</p>
+				<p>Bad: {store.getState().bad}</p>
+			</div>
+			<button onClick = {() => {store.dispatch({ type: 'good'})}}>Good</button>
+			<button onClick = {() => {store.dispatch({ type: 'ok'})}}>OK</button>
+			<button onClick = {() => {store.dispatch({ type: 'bad'})}}>Bad</button>
+			<button onClick = {() => {store.dispatch({ type: 'zero'})}}>Zero</button>
+		</div>
+	)
+}
+
+
+export default counterReducer
+*****************************************************************************
+import counterReducer from './index.js'
+import deepFreeze from 'deep-freeze'
+
+describe('counterReducer', () => {
+	const initialState = {
+		good: 0,
+		ok: 0,
+		bad: 0
+	}
+  
+	test('should return a proper initial state when called with undefined state', () => {
+		const state = {}
+		const action = {
+			type: 'Nothing'
+		}
+		
+		deepFreeze(state)
+		const newState = counterReducer(undefined, action)
+		expect(newState).toEqual(initialState)
+	})
+	
+	test('good is incremented', () => {
+		const state = initialState
+		const action = {
+			type: 'good'
+		}
+		
+		deepFreeze(state)
+		const newState = counterReducer(state, action)
+		expect(newState).toEqual({
+			good: 1,
+			ok: 0,
+			bad: 0
+		})
+	})
+})
+
+
+
+6.3 - 6.8 Anecdote 
+*************************************anecdoteReducer***************************************
+const initialState = [
+	{
+		content: "But it works in my machine...",
+		vote: 8,
+		id: 1
+	},
+	{
+		content: "If it hurts, do it more often",
+		vote: 2,
+		id: 2
+	},
+	{
+		content: "Any fool can write code that a computer can understand.Good programmers write code that humans can understand",
+		vote: 10,
+		id: 3
+	},
+	{
+		content: "The first 90 percent of the code accounts for the first 90 percent of the development time...",
+		vote: 5,
+		id: 4
+	},
+	{
+		content: "Adding manpower to a late software project makes it later",
+		vote: 8,
+		id: 5
+	}
+]
+
+const anecdoteReducer = (state = initialState, action) => {
+	switch(action.type) {
+		case 'newVote': 
+			return state.concat(action.data)
+		case 'vote': 
+			return state.map(s => s.id === action.data.id ? {...s, vote: s.vote + 1} : s)
+		default: 
+			return state
+	}
+}
+
+
+export const voteAdd = (id) => {
+	return {
+		type: 'vote',
+		data: {id}
+	}
+}
+
+const generateId = () => Number((Math.random() * 1000000).toFixed(0))
+
+export const noteAdd = (content) => {
+	return {
+		type: 'newVote',
+		data: {
+			content,
+			vote: 0,
+			id: generateId()
+		}
+	}
+}
+
+
+
+export default anecdoteReducer
+********************************AnecdoteForm*********************************************
+import React from 'react'
+import { noteAdd } from "./anecdoteReducer.js"
+
+const AnecdoteForm = (props) => {
+	const handleNoteAdd = (event) => {
+		event.preventDefault()
+		const content = event.target.anecdote.value
+		props.store.dispatch(noteAdd(content))
+		event.target.anecdote.value = ''
+	}
+
+	return(
+		<div>
+			<br/>
+			<br/>
+			<form onSubmit = {handleNoteAdd}>
+				<input name = "anecdote" />
+				<button type = "submit">ADD</button>
+			</form>
+		</div>
+	)
+}
+
+export default AnecdoteForm
+*************************************AnecdoteList***************************************
+import React from 'react'
+import { voteAdd } from "./anecdoteReducer.js"
+
+const AnecdoteList = (props) => {
+	const handleVoteAdd = (id) => {
+		props.store.dispatch(voteAdd(id))
+	}
+	
+	return(
+		<div>
+			<ul>
+				{props.store.getState().sort((a,b) => a.vote - b.vote).map(a => <li key = {a.id}>{a.content}<br/>has&nbsp;&nbsp;{a.vote}&nbsp;&nbsp;<button onClick = {() => handleVoteAdd(a.id)}>Vote</button></li>)}
+			</ul>
+		</div>
+	)
+}
+
+export default AnecdoteList
+**********************************App**********************************************
+import React from 'react'
+import AnecdoteForm from "./AnecdoteForm"
+import AnecdoteList from "./AnecdoteList"
+
+
+const App = (props) => {
+	return(
+		<div>
+			<h1>Anecdotes</h1>
+			<AnecdoteList store = {props.store} />
+			<AnecdoteForm store = {props.store} />
+		</div>
+	)
+}
+
+
+export default App
+********************************Index*******************************************
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { createStore } from 'redux'
+import anecdoteReducer from './anecdoteReducer.js'
+import App from "./App.js"
+
+
+const store	= createStore(anecdoteReducer)
+
+
+const renderApp = () => {
+	ReactDOM.render(<App store = {store} />, document.getElementById('root'))
+}
+
+
+renderApp()
+store.subscribe(renderApp)
+
+
+
+6. 9 - 6.11 Better Anecdotes
+******************************************anecdoteReducer*******************************************
+const initialState = [
+	{
+		content: "But it works in my machine...",
+		vote: 8,
+		id: 1
+	},
+	{
+		content: "If it hurts, do it more often",
+		vote: 2,
+		id: 2
+	},
+	{
+		content: "Any fool can write code that a computer can understand.Good programmers write code that humans can understand",
+		vote: 10,
+		id: 3
+	},
+	{
+		content: "The first 90 percent of the code accounts for the first 90 percent of the development time...",
+		vote: 5,
+		id: 4
+	},
+	{
+		content: "Adding manpower to a late software project makes it later",
+		vote: 8,
+		id: 5
+	}
+]
+
+const anecdoteReducer = (state = initialState, action) => {
+	switch(action.type) {
+		case 'newVote': 
+			return state.concat(action.data)
+		case 'vote': 
+			return state.map(s => s.id === action.data.id ? {...s, vote: s.vote + 1} : s)
+		default: 
+			return state
+	}
+}
+
+
+export const voteAdd = (id) => {
+	return {
+		type: 'vote',
+		data: {id}
+	}
+}
+
+const generateId = () => Number((Math.random() * 1000000).toFixed(0))
+
+export const noteAdd = (content) => {
+	return {
+		type: 'newVote',
+		data: {
+			content,
+			vote: 0,
+			id: generateId()
+		}
+	}
+}
+
+
+
+export default anecdoteReducer
+***************************************notificationReducer**********************************************
+const notificationReducer = (state = null, action) => {
+	switch(action.type) {
+		case 'vote_show': 
+			return action.message
+		case 'add_show':
+			return action.message
+		case 'gone': 
+			return action.message
+		default: 
+			return state
+	}
+}
+
+export const voteShow = (id, props) => {
+	return {
+		type:'vote_show',
+		message:  `you voted ${props.store.getState().anecdotes.find(n => n.id ===id).content}`
+	}
+}
+
+export const addShow = (content) => {
+	return {
+		type:'add_show',
+		message: `${content} added`
+	}
+}
+
+export const gone = () => {
+	return {
+		type: 'gone',
+		message: null
+	}
+} 
+
+
+export default notificationReducer
+********************************************filterReducer*****************************************
+const filterReducer = (state = '', action) => {
+	switch(action.type) {
+		case 'filter':
+			return action.filter
+		default: 
+			return state
+	}
+}
+
+export const Filter = (filter) => {
+	return {
+		type: 'filter',
+		filter
+	}
+}
+
+export default filterReducer
+******************************************AnecdoteForm*******************************************
+import React from 'react'
+import { noteAdd } from "./anecdoteReducer.js"
+import { addShow, gone } from "./notificationReducer.js"
+
+const AnecdoteForm = (props) => {
+	const handleNoteAdd = (event) => {
+		event.preventDefault()
+		const content = event.target.anecdote.value
+		props.store.dispatch(noteAdd(content))
+		props.store.dispatch(addShow(content))
+		event.target.anecdote.value = ''
+		setTimeout(() => {props.store.dispatch(gone())}, 5000)
+	}
+
+	return(
+		<div>
+			<br/>
+			<br/>
+			<form onSubmit = {handleNoteAdd}>
+				<input name = "anecdote" />
+				<button type = "submit">ADD</button>
+			</form>
+		</div>
+	)
+}
+
+export default AnecdoteForm
+*******************************************AnecdoteList******************************************
+import React from 'react'
+import { voteAdd } from "./anecdoteReducer.js"
+import { voteShow, gone } from "./notificationReducer.js"
+
+const AnecdoteList = (props) => {
+	const handleVoteAdd = (id) => {
+		props.store.dispatch(voteAdd(id))
+		props.store.dispatch(voteShow(id, props))
+		setTimeout(() => {props.store.dispatch(gone())}, 5000)
+	}
+	
+	const notesToShow = props.store.getState().filter === ''
+	? props.store.getState().anecdotes
+	: props.store.getState().anecdotes.filter(a => a.content.toLowerCase().indexOf(props.store.getState().filterfunction) !== -1)
+	
+	return(
+		<div>
+			<ul>
+				{notesToShow.sort((a,b) => a.vote - b.vote).map(a => <li key = {a.id}>{a.content}<br/>has&nbsp;&nbsp;{a.vote}&nbsp;&nbsp;<button onClick = {() => handleVoteAdd(a.id)}>Vote</button></li>)}
+			</ul>
+		</div>
+	)
+}
+
+export default AnecdoteList
+*******************************************Notification******************************************
+import React from 'react'
+
+const Notification = (props) => {
+	return(
+		<div>
+			<h2>{props.store.getState().notification}</h2>
+		</div>
+	)
+}
+
+export default Notification
+*******************************************FilterFunction******************************************
+import React from 'react'
+import { Filter } from './filterReducer'
+
+const FilterFunction = (props) => {
+	let search 
+	
+	const handleFilter = (event) => {
+		search = event.target.value
+		props.store.dispatch(Filter(search))
+	} 
+	
+	return(
+		<div>
+			Filter: &nbsp; <input type="text" value = {search} onChange = {handleFilter} />
+		</div>
+	)
+}
+
+export default FilterFunction
+*******************************************App******************************************
+import React from 'react'
+import AnecdoteForm from "./AnecdoteForm"
+import AnecdoteList from "./AnecdoteList"
+import Notification from "./Notification"
+import FilterFunction from './Filter'
+
+
+const App = (props) => {
+	return(
+		<div>
+			<h1>Anecdotes</h1>
+			<Notification store = {props.store} />
+			<FilterFunction store = {props.store}/>
+			<AnecdoteList store = {props.store} />
+			<AnecdoteForm store = {props.store} />
+		</div>
+	)
+}
+
+
+export default App
+*******************************************index******************************************
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { createStore, combineReducers } from 'redux'
+import anecdoteReducer from './anecdoteReducer.js'
+import notificationReducer from './notificationReducer.js'
+import filterReducer from './filterReducer.js'
+import App from "./App.js"
+
+
+const reducer = combineReducers({
+	anecdotes: anecdoteReducer,
+	notification: notificationReducer,
+	filterfunction: filterReducer
+})
+
+
+const store	= createStore(reducer)
+
+
+const renderApp = () => {
+	ReactDOM.render(<App store = {store} />, document.getElementById('root'))
+}
+
+
+renderApp()
+store.subscribe(renderApp)
+
+
+
+6.12 - 6.15 Better Anecdotes
+**********************************************index*********************************************
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { createStore, combineReducers } from 'redux'
+import { Provider } from 'react-redux'
+import anecdoteReducer from './anecdoteReducer.js'
+import notificationReducer from './notificationReducer.js'
+import filterReducer from './filterReducer.js'
+import App from "./App.js"
+
+
+const reducer = combineReducers({
+	anecdotes: anecdoteReducer,
+	notification: notificationReducer,
+	filterfunction: filterReducer
+})
+
+
+const store	= createStore(reducer)
+
+
+const renderApp = () => {
+	ReactDOM.render(
+	<Provider store={store}>
+    <App />
+	</Provider>, document.getElementById('root'))
+}
+
+
+renderApp()
+store.subscribe(renderApp)
+***********************************************App**********************************************
+import React from 'react'
+import AnecdoteForm from "./AnecdoteForm"
+import AnecdoteList from "./AnecdoteList"
+import Notification from "./Notification"
+import FilterFunction from './Filter'
+
+
+const App = () => {
+	return(
+		<div>
+			<h1>Anecdotes</h1>
+			<Notification />
+			<FilterFunction />
+			<AnecdoteList />
+			<AnecdoteForm />
+		</div>
+	)
+}
+
+
+export default App
+*******************************************AnecdoteList******************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { voteAdd } from "./anecdoteReducer.js"
+import { voteShow, gone } from "./notificationReducer.js"
+
+
+const AnecdoteList = (props) => {
+	console.log(props)
+	
+	const handleVoteAdd = (id) => {
+		props.voteAdd(id)
+		const note = props.visibleNotes.find(n => n.id ===id).content
+		props.voteShow(note)
+		setTimeout(() => {props.gone()}, 5000)
+	}
+	
+	return(
+		<div>
+			<ul>
+				{props.visibleNotes.sort((a,b) => a.vote - b.vote).map(a => 
+					<li key = {a.id}>{a.content}
+					<br/>has&nbsp;&nbsp;
+					{a.vote}&nbsp;&nbsp;
+					<button onClick = {() => handleVoteAdd(a.id)}>Vote</button>
+					</li>)
+				}
+			</ul>
+		</div>
+	)
+}
+
+	const notesToShow = ({ filterfunction, anecdotes }) => {
+		return filterfunction === ''
+		? anecdotes
+		: anecdotes.filter(a => a.content.toLowerCase().indexOf(filterfunction) !== -1)
+	} 
+
+	const mapStateToProps = (state) => {
+		console.log(state)
+		return {
+			visibleNotes:notesToShow(state)
+		}
+	}
+
+	const mapDispatchToProps = {
+		voteAdd,
+		voteShow,
+		gone
+	}
+
+
+export default connect(
+	mapStateToProps,
+	mapDispatchToProps
+)(AnecdoteList)
+******************************************AnecdoteForm*******************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { noteAdd } from "./anecdoteReducer.js"
+import { addShow, gone } from "./notificationReducer.js"
+
+const AnecdoteForm = (props) => {
+	const handleNoteAdd = (event) => {
+		event.preventDefault()
+		const content = event.target.anecdote.value
+		props.noteAdd(content)
+		props.addShow(content)
+		event.target.anecdote.value = ''
+		setTimeout(() => {props.gone()}, 5000)
+	}
+
+	return(
+		<div>
+			<br/>
+			<br/>
+			<form onSubmit = {handleNoteAdd}>
+				<input name = "anecdote" />
+				<button type = "submit">ADD</button>
+			</form>
+		</div>
+	)
+}
+
+export default connect(
+  null,
+  {
+	noteAdd,
+	addShow,
+	gone
+  }
+)(AnecdoteForm)
+*******************************************Notification******************************************
+import React from 'react'
+import { connect } from 'react-redux'
+
+
+const Notification = (props) => {
+	return(
+		<div>
+			<h2>{props.notification}</h2>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+  return {
+    notification: state.notification
+  }
+}
+
+
+export default connect(
+	mapStateToProps
+)(Notification)
+*******************************************FilterFunction******************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { Filter } from './filterReducer'
+
+const FilterFunction = (props) => {
+	let search 
+	
+	const handleFilter = (event) => {
+		search = event.target.value
+		props.Filter(search)
+	} 
+	
+	return(
+		<div>
+			Filter: &nbsp; <input type="text" value = {search} onChange = {handleFilter} />
+		</div>
+	)
+}
+
+
+export default connect(
+  null,
+  {
+	Filter
+  }
+)(FilterFunction)
+
+
+
+6.16 - 6. 21 Anecdotes and the Backend
+**********************************************index*********************************************
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { Provider } from 'react-redux'
+import App from "./App.js"
+import store from './store'
+
+
+const renderApp = () => {
+	ReactDOM.render(
+	<Provider store={store}>
+    <App />
+	</Provider>, document.getElementById('root'))
+}
+
+
+renderApp()
+store.subscribe(renderApp)
+**********************************************store*********************************************
+import { createStore, combineReducers, applyMiddleware } from 'redux'
+import thunk from "redux-thunk"
+import anecdoteReducer from './anecdoteReducer.js'
+import notificationReducer from './notificationReducer.js'
+import filterReducer from './filterReducer.js'
+
+
+const reducer = combineReducers({
+	anecdotes: anecdoteReducer,
+	notification: notificationReducer,
+	filterfunction: filterReducer
+})
+
+
+const store	= createStore(reducer, applyMiddleware(thunk))
+
+
+export default store
+**********************************************App***********************************************
+import React, { useEffect } from 'react'
+import AnecdoteForm from "./AnecdoteForm"
+import AnecdoteList from "./AnecdoteList"
+import Notification from "./Notification"
+import FilterFunction from './Filter'
+import { connect } from 'react-redux'
+import { initialNotes } from './anecdoteReducer.js'
+
+
+const App = (props) => {
+	useEffect(() => {
+		props.initialNotes()
+	},[])
+	
+	return(
+		<div>
+			<h1>Anecdotes</h1>
+			<Notification />
+			<FilterFunction />
+			<AnecdoteList />
+			<AnecdoteForm />
+		</div>
+	)
+}
+
+
+export default connect(null, { initialNotes })(App)
+**********************************************AnecdoteList*********************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { voteAdd } from "./anecdoteReducer.js"
+import { voteShow, gone } from "./notificationReducer.js"
+
+
+const AnecdoteList = (props) => {
+	const handleVoteAdd = (id) => {
+		const newObject = props.visibleNotes.find(n => n.id === id)
+		const changedObject = { ...newObject, votes: newObject.votes + 1 }
+		props.voteAdd(id, changedObject)
+		const note = props.visibleNotes.find(n => n.id ===id).content
+		props.voteShow(note, 3000)
+		// setTimeout(() => {props.gone()}, 5000)
+	}
+	
+	return(
+		<div>
+			<ul>
+				{props.visibleNotes.sort((a,b) => a.votes - b.votes).map(a => 
+					<li key = {a.id}>{a.content}
+					<br/>has&nbsp;&nbsp;
+					{a.votes}&nbsp;&nbsp;
+					<button onClick = {() => handleVoteAdd(a.id)}>Vote</button>
+					</li>)
+				}
+			</ul>
+		</div>
+	)
+}
+
+	const notesToShow = ({ filterfunction, anecdotes }) => {
+		return filterfunction === ''
+		? anecdotes
+		: anecdotes.filter(a => a.content.toLowerCase().indexOf(filterfunction) !== -1)
+	} 
+
+	const mapStateToProps = (state) => {
+		return {
+			visibleNotes:notesToShow(state)
+		}
+	}
+
+	const mapDispatchToProps = {
+		voteAdd,
+		voteShow,
+		gone
+	}
+
+
+export default connect(
+	mapStateToProps,
+	mapDispatchToProps
+)(AnecdoteList)
+**********************************************AnecdoteForm*********************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { noteAdd } from "./anecdoteReducer.js"
+import { addShow, gone } from "./notificationReducer.js"
+
+
+const AnecdoteForm = (props) => {
+	const handleNoteAdd = async(event) => {
+		event.preventDefault()
+		const content = event.target.anecdote.value
+		event.target.anecdote.value = ''
+		props.noteAdd(content)
+		props.addShow(content, 3000)
+		// setTimeout(() => {props.gone()}, 5000)
+	}
+
+	return(
+		<div>
+			<br/>
+			<br/>
+			<form onSubmit = {handleNoteAdd}>
+				<input name = "anecdote" />
+				<button type = "submit">ADD</button>
+			</form>
+		</div>
+	)
+}
+
+export default connect(
+  null,
+  {
+	noteAdd,
+	addShow,
+	gone
+  }
+)(AnecdoteForm)
+**********************************************Notification*********************************************
+import React from 'react'
+import { connect } from 'react-redux'
+
+
+const Notification = (props) => {
+	return(
+		<div>
+			<h2>{props.notification}</h2>
+		</div>
+	)
+}
+
+
+const mapStateToProps = (state) => {
+  return {
+    notification: state.notification
+  }
+}
+
+
+export default connect(
+	mapStateToProps
+)(Notification)
+**********************************************Filter*********************************************
+import React from 'react'
+import { connect } from 'react-redux'
+import { Filter } from './filterReducer'
+
+const FilterFunction = (props) => {
+	let search 
+	
+	const handleFilter = (event) => {
+		search = event.target.value
+		props.Filter(search)
+	} 
+	
+	return(
+		<div>
+			Filter: &nbsp; <input type="text" value = {search} onChange = {handleFilter} />
+		</div>
+	)
+}
+
+
+export default connect(
+  null,
+  {
+	Filter
+  }
+)(FilterFunction)
+**********************************************anecdoteReducer*********************************************
+import anecdoteService from "./anecdote_axios"
+
+const anecdoteReducer = (state = [], action) => {
+	switch(action.type) {
+		case 'newVote': 
+			return state.concat(action.data)
+		case 'vote': 
+			return state.map(s => s.id === action.data.id ? {...s, votes: s.votes + 1} : s)
+		case 'initial':
+			return action.data
+		default: 
+			return state
+	}
+}
+
+
+export const initialNotes = () => {
+	return async dispatch => {
+		const anecdotes = await anecdoteService.getAll()
+		dispatch({
+			type: 'initial',
+			data: anecdotes
+		})
+	}
+}
+
+
+export const voteAdd = (id, changedObject) => {
+	return async dispatch => {
+		await anecdoteService.update(id, changedObject)
+		dispatch({
+			type: 'vote',
+			data: {id}
+		})
+	}
+}
+
+
+export const noteAdd = (content) => {
+	return async dispatch => {
+		const newNote = await anecdoteService.createNew(content)
+		dispatch({
+			type: 'newVote',
+			data: newNote
+		})
+	}
+}
+
+
+
+export default anecdoteReducer
+**********************************************notificationReducer*********************************************
+const notificationReducer = (state = null, action) => {
+	switch(action.type) {
+		case 'vote_show': 
+			return action.message
+		case 'add_show':
+			return action.message
+		case 'gone': 
+			return action.message
+		default: 
+			return state
+	}
+}
+
+export const voteShow = (note, a) => {
+	return async dispatch => {
+		await dispatch({
+			type:'vote_show',
+			message:  `you voted ${note}`
+		}) 
+		setTimeout(() => {
+			dispatch({
+				type: 'gone',
+				message: null
+			})
+		}, a)
+	}
+}
+
+export const addShow = (content, a) => {
+	return async dispatch => {
+		await dispatch({
+			type:'add_show',
+			message: `${content} added`
+		})
+		setTimeout(() => {
+			dispatch({
+				type: 'gone',
+				message: null
+			})
+		}, a)
+	}
+}
+
+export const gone = () => {
+	return {
+		type: 'gone',
+		message: null
+	}
+} 
+
+
+export default notificationReducer
+**********************************************filterReducer*********************************************
+const filterReducer = (state = '', action) => {
+	switch(action.type) {
+		case 'filter':
+			return action.filter
+		default: 
+			return state
+	}
+}
+
+export const Filter = (filter) => {
+	return {
+		type: 'filter',
+		filter
+	}
+}
+
+export default filterReducer
+**********************************************anecdote_axios*********************************************
+import axios from 'axios'
+
+const baseUrl = 'http://localhost:3002/anecdotes'
+
+const getAll = async () => {
+  const response = await axios.get(baseUrl)
+  return response.data
+}
+
+const createNew = async content => {
+  const object = { content, vote: 0 }
+  const response = await axios.post(baseUrl, object)
+  return response.data
+}
+
+const update = async (id, changedObject) => {
+	const response = await axios.put(`${baseUrl}/${id}`, changedObject)
+	return response.data
+}
+
+export default { getAll, createNew, update }
+**********************************************db.json*********************************************
+{
+  "anecdotes": [
+    {
+      "content": "If it hurts, do it more often",
+      "id": 1,
+      "votes": 15
+    },
+    {
+      "content": "Adding manpower to a late software project makes it later!",
+      "id": 2,
+      "votes": 4
+    },
+    {
+      "content": "The first 90 percent of the code accounts for the first 90 percent of the development time...The remaining 10 percent of the code accounts for the other 90 percent of the development time.",
+      "id": 3,
+      "votes": 9
+    },
+    {
+      "content": "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+      "id": 4,
+      "votes": 9
+    },
+    {
+      "content": "Premature optimization is the root of all evil.",
+      "id": 5,
+      "votes": 14
+    },
+    {
+      "content": "Debugging is twice as hard as writing the code in the first place. Therefore, if you write the code as cleverly as possible, you are, by definition, not smart enough to debug it.",
+      "id": 6,
+      "votes": 15
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+
